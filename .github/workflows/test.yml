@@ -1,6 +1,13 @@
 name: Run Tests
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test:
@@ -11,15 +18,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v2
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest selenium
+          pip install pytest selenium pytest-html
 
-      - name: Run Tests
-        # 'xvfb-run' or headless mode in Selenium is required for ubuntu-latest
-        run: pytest test_search_parametrized.py
+      - name: Run tests
+        run: |
+          pytest test_search_parametrized.py \
+            --html=report.html \
+            --self-contained-html
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: report.html
