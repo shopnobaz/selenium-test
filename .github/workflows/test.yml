@@ -1,4 +1,4 @@
-name: Run Tests
+ name: Run Tests
 
 on:
   push:
@@ -6,8 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+# Note: Node24 might be too experimental for some stable actions; 
+# Node20 is currently the recommended long-term support for GH Actions.
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true 
 
 jobs:
   test:
@@ -21,9 +23,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip' # Speeds up subsequent runs
 
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@v2
+      - name: Setup Chrome & Driver
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+      
+      - name: Install Chromedriver
+        uses: nanasess/setup-chromedriver@v2
 
       - name: Install dependencies
         run: |
@@ -31,10 +39,16 @@ jobs:
           pip install pytest selenium pytest-html
 
       - name: Run tests
+        # Use xvfb-run to provide a virtual display buffer, 
+        # even if you are running in headless mode.
         run: |
+          export DISPLAY=:99
+          chromedriver --url-base=/wd/hub &
           pytest test_search_parametrized.py \
             --html=report.html \
             --self-contained-html
+        env:
+          PYTHONPATH: .
 
       - name: Upload report
         if: always()
